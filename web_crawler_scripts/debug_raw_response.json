@@ -1,0 +1,948 @@
+{
+  "user": {
+    "is_login": 0,
+    "id": 0,
+    "name": "",
+    "type": 0,
+    "call_fans_info": {
+      "can_call": 0
+    }
+  },
+  "search_query": "",
+  "ctime": "0",
+  "error_msg": "",
+  "display_forum": {
+    "id": 17961127,
+    "name": "三国志战略版",
+    "is_exists": 1,
+    "avatar": "https://tiebapic.baidu.com/forum/w%3D120%3Bh%3D120/sign=02165d09340e0cf3a0f74af93a7d9a22/bd315c6034a85edf1ff50e380f540923dd5475b4.jpg?tbpicau=2026-04-05-05_1a4652bde0a70ffb9ffccd970b0c0db0",
+    "is_liked": 0,
+    "first_class": "游戏",
+    "second_class": "手机游戏",
+    "is_brand_forum": 0
+  },
+  "partial_visible_toast": "贴子审核中，稍候刷新再试",
+  "is_official_forum": 1,
+  "user_list": [
+    {
+      "target_scheme": "",
+      "display_intro": "",
+      "bawu_type": "",
+      "ala_info": {
+        "live_status": 0,
+        "live_id": 0,
+        "location": ""
+      },
+      "agree_num": 0,
+      "ip_address": "浙江",
+      "iconinfo": [
+        {
+          "terminal": {
+            "client": 1,
+            "pc": 1,
+            "wap": 1
+          },
+          "position": {
+            "pb": 1,
+            "home": 1,
+            "card": 1,
+            "frs": 1
+          },
+          "name": "starmaster",
+          "weight": 1,
+          "icon": "http://tb1.bdstatic.com/tb/cms/com/icon/file_1429670602958.png",
+          "value": 4
+        }
+      ],
+      "fans_nickname": "",
+      "ala_live_info": {
+        "live_id": 0,
+        "live_status": 0
+      },
+      "user_growth": {
+        "level_id": 6
+      },
+      "level_id": 8,
+      "has_concerned": 0,
+      "name": "明夜vs秋夜",
+      "is_bawu": 0,
+      "name_show": "明夜vs秋夜",
+      "gift_num": 0,
+      "new_god_data": {
+        "field_id": 0
+      },
+      "level_name": "监军",
+      "id": 1332890541,
+      "fans_num": 0,
+      "gender": 1,
+      "priv_sets": {
+        "like": 3
+      },
+      "seal_prefix": "",
+      "portrait": "tb.1.5675fcac.iAcvcW3ZxNocnDH_TDtNgw?t=1774408796",
+      "thread_num": 0,
+      "display_auth_type": 0,
+      "scheme": "",
+      "is_mem": 0
+    },
+    {
+      "id": 3617115158,
+      "portrait": "tb.1.7b8ee380.9mYNlc1bOgEQzBGPPkwA9g",
+      "has_concerned": 0,
+      "ala_info": {
+        "live_status": 1
+      },
+      "ala_live_info": {
+        "live_status": 1,
+        "live_from": 0,
+        "third_room_id": "",
+        "router_type": "",
+        "third_live_type": "",
+        "room_id": 11167770374,
+        "live_id": 11167770374,
+        "live_type": 3
+      }
+    }
+  ],
+  "thread_freq_num": 968,
+  "fold_tip": "查看本楼内容",
+  "sort_type": 1774408791,
+  "forum_rule": {
+    "title": "【三国志战略版吧吧规】03月05日更新 发贴必读",
+    "has_forum_rule": 1
+  },
+  "is_black_white": 0,
+  "bottom_resource": [
+    {
+      "day": {
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501116/a0d6cc6ea26b.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501116/a0d6cc6ea26b.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501116/a0d6cc6ea26b.webp",
+        "font_color": "#000311",
+        "pattern_text": "抢沙发",
+        "type": 1,
+        "pattern_num": 46
+      },
+      "night": {
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501479/2b41a1ded5f8.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501479/2b41a1ded5f8.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501479/2b41a1ded5f8.webp",
+        "font_color": "#E6FFFFFF",
+        "pattern_text": "抢沙发",
+        "type": 1,
+        "pattern_num": 46
+      },
+      "dark": {
+        "type": 1,
+        "pattern_num": 46,
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501479/2b41a1ded5f8.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501479/2b41a1ded5f8.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958501479/2b41a1ded5f8.webp",
+        "font_color": "#E6FFFFFF",
+        "pattern_text": "抢沙发"
+      }
+    },
+    {
+      "dark": {
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958504915/a15ff390dff5.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958505718/604c67156942.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958505718/604c67156942.webp",
+        "font_color": "#E6FFFFFF",
+        "pattern_text": "点赞",
+        "type": 2,
+        "pattern_num": 22
+      },
+      "day": {
+        "font_color": "#000311",
+        "pattern_text": "点赞",
+        "type": 2,
+        "pattern_num": 22,
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958505278/003593148edb.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958506587/6b96493d007a.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958506587/6b96493d007a.webp"
+      },
+      "night": {
+        "font_color": "#E6FFFFFF",
+        "pattern_text": "点赞",
+        "type": 2,
+        "pattern_num": 22,
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958504915/a15ff390dff5.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958505718/604c67156942.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1751958505718/604c67156942.webp"
+      }
+    },
+    {
+      "day": {
+        "font_color": "#000311",
+        "pattern_text": "收藏",
+        "type": 3,
+        "pattern_num": 1,
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616002/246bc8406d06.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616834/051b62d64ed6.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616834/051b62d64ed6.webp"
+      },
+      "night": {
+        "pattern_num": 1,
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616002/246bc8406d06.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616479/b86b70f6e15f.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616479/b86b70f6e15f.webp",
+        "font_color": "#E6FFFFFF",
+        "pattern_text": "收藏",
+        "type": 3
+      },
+      "dark": {
+        "type": 3,
+        "pattern_num": 1,
+        "pattern_image_select": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616002/246bc8406d06.webp",
+        "pattern_image_not_selected": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616479/b86b70f6e15f.webp",
+        "pattern_image": "https://tieba-ares.cdn.bcebos.com/mis/2025-7/1752136616479/b86b70f6e15f.webp",
+        "font_color": "#E6FFFFFF",
+        "pattern_text": "收藏"
+      }
+    }
+  ],
+  "error_code": 0,
+  "page": {
+    "total_page": 4,
+    "tnum": 0,
+    "total_num": 20,
+    "page_size": 5,
+    "current_page": 1,
+    "has_more": 1,
+    "has_prev": 0,
+    "req_num": 5,
+    "pnum": 0,
+    "new_total_page": 4,
+    "offset": 0
+  },
+  "has_floor": 1,
+  "floating_icon": {
+    "pbpage": {
+      "url": ""
+    }
+  },
+  "is_purchase": 0,
+  "log_param": [
+    {
+      "key": "trace_code",
+      "value": "11964116142419451146032511"
+    },
+    {
+      "key": "request_times",
+      "value": "0"
+    },
+    {
+      "key": "refresh_type",
+      "value": "2"
+    },
+    {
+      "key": "tieba_cuid",
+      "value": "baidutiebaapp"
+    },
+    {
+      "key": "page",
+      "value": "pb"
+    },
+    {
+      "key": "tab",
+      "value": ""
+    },
+    {
+      "key": "sub_tab",
+      "value": ""
+    },
+    {
+      "key": "tid",
+      "value": "10584752481"
+    },
+    {
+      "key": "params",
+      "value": "{\"thread_type\":\"0\"}"
+    }
+  ],
+  "use_hybrid_pb": 0,
+  "ai_game_info": {
+    "game_id": "game_69b23081a4446",
+    "origin_game_id": "game_69b23081a55d9",
+    "title": "荒野求生",
+    "summary": "荒野求生 - 高乙叁山仟庚丁癸拾柒西亥一壬戊仟卯丙七甲假坏己长真肆多上己天下伍大好下五乙十卯火丙亿丑",
+    "icon_url": "https://example.com/icons/792.svg",
+    "jump_url": "https://example.com/games/game_69b23081a4446"
+  },
+  "logid": "1196411614",
+  "anti": {
+    "ifpost": 0,
+    "voice_message": "哎呀，三级以上才能发语音，速速升级吧",
+    "forbid_flag": 1,
+    "video_message": "",
+    "block_pop_info": {
+      "can_post": 0,
+      "block_info": "本吧目前仅限登录用户发贴",
+      "sub_block_info": ""
+    },
+    "del_thread_text": [
+      {
+        "text_id": 1,
+        "text_info": "恶意刷屏"
+      },
+      {
+        "text_id": 2,
+        "text_info": "不友善言论"
+      },
+      {
+        "text_id": 3,
+        "text_info": "色情低俗"
+      },
+      {
+        "text_id": 4,
+        "text_info": "违法信息"
+      },
+      {
+        "text_id": 5,
+        "text_info": "散布广告"
+      },
+      {
+        "text_id": 6,
+        "text_info": "违反自设吧规"
+      }
+    ],
+    "tbs": "5ce8d6056d3c7a1c1774408796",
+    "ifxiaoying": "",
+    "multi_delthread": 1,
+    "ifposta": 0,
+    "forbid_info": "本吧目前仅限登录用户发贴",
+    "ifvoice": 1,
+    "ifaddition": 0,
+    "reply_private_flag": 1
+  },
+  "is_new_url": 1,
+  "switch_read_open": 0,
+  "banner_list": {},
+  "pb_sort_info": [
+    {
+      "sort_type": 0,
+      "sort_name": "正序"
+    },
+    {
+      "sort_type": 1,
+      "sort_name": "倒序"
+    }
+  ],
+  "business_promot_info": {
+    "is_promot": 0,
+    "is_headlinepost": 0,
+    "is_s_card": 0
+  },
+  "post_list": [
+    {
+      "id": 153337932805,
+      "content": [
+        {
+          "type": 0,
+          "text": "第一个最简单的逻辑 氪几十万的大佬肯定不会跟一个月卡或者断氪党打个有来有回吧 基本所有的游戏不都是这种道理嘛 （除了一些只卖皮肤不卖数值的游戏LOL CSGO这样的） 谁氪的多谁就厉害很正常的 总不能人家花你几倍的钱还跟你玩石头剪刀布吧",
+          "is_native_app": 0
+        }
+      ],
+      "bimg_url": "",
+      "is_post_visible": 0,
+      "is_fold": 0,
+      "log_param": [
+        {
+          "key": "fid",
+          "value": "17961127"
+        },
+        {
+          "key": "tid",
+          "value": "10584752481"
+        },
+        {
+          "key": "card_type",
+          "value": "firstFloor"
+        },
+        {
+          "key": "pid",
+          "value": "153337932805"
+        },
+        {
+          "key": "tag",
+          "value": "[]"
+        },
+        {
+          "key": "params",
+          "value": "{\"thread_type\":\"0\"}"
+        }
+      ],
+      "title": "回归老玩家客观的讲些目前环境的问题",
+      "sub_post_number": 0,
+      "agree": {
+        "agree_num": 1,
+        "has_agree": 0,
+        "agree_type": 0,
+        "disagree_num": 0,
+        "diff_agree_num": 1
+      },
+      "show_squared": 0,
+      "dynamic_url": "",
+      "is_ntitle": 0,
+      "ios_bimg_format": "",
+      "author_id": 1332890541,
+      "is_top_agree_post": 0,
+      "ios_b_url": "",
+      "floor": 1,
+      "time": 1774373093,
+      "need_log": 0,
+      "fold_tip": ""
+    },
+    {
+      "show_squared": 0,
+      "floor": 2,
+      "ios_bimg_format": "",
+      "bimg_url": "",
+      "agree": {
+        "agree_type": 0,
+        "disagree_num": 0,
+        "diff_agree_num": 0,
+        "agree_num": 0,
+        "has_agree": 0
+      },
+      "need_log": 0,
+      "is_fold": 0,
+      "fold_tip": "",
+      "ios_b_url": "",
+      "time": 1774373123,
+      "sub_post_number": 2,
+      "author_id": 1332890541,
+      "is_post_visible": 0,
+      "dynamic_url": "",
+      "id": 153337933794,
+      "is_ntitle": 0,
+      "is_top_agree_post": 0,
+      "log_param": [
+        {
+          "key": "fid",
+          "value": "17961127"
+        },
+        {
+          "value": "10584752481",
+          "key": "tid"
+        },
+        {
+          "key": "card_type",
+          "value": "floor"
+        },
+        {
+          "key": "pid",
+          "value": "153337933794"
+        },
+        {
+          "key": "tag",
+          "value": "[]"
+        },
+        {
+          "value": "{\"thread_type\":\"0\"}",
+          "key": "params"
+        }
+      ],
+      "title": "回复：回归老玩家客观的讲些目前环境的问题",
+      "content": [
+        {
+          "type": 0,
+          "text": "第二个问题是三幻神打不过拒马 拒马没有任何可以克制的 我玩了这几天其实拒马也没那么离谱 我估计策划出这第四个幻神也是思考很久 第一不能说同红度下穿了其他三幻神 但是也不能太弱 必须给点正反馈 毕竟三个都是新将 就设计成一个乌龟阵容 你能稳定打个万把武勋出个假无双有点反馈（代价就是兵损大）没有玩过拒马的人看见就说简直就是翻不过去的山 各种拒马无双刷脸上 特别是自己连串几队马上一万武勋结果中途给你来个拒马 被恶心到了 没有连串爽感 其实拒马兵损很大而且也有克制阵容 只是现在很多人都有满红皇马法官肯定是优先出这个 好比我"
+        },
+        {
+          "type": 40,
+          "text": "氪金",
+          "link": "https://tieba.baidu.com/mo/q/hybrid-usergrow-search/searchGlobal?pageType=result&keyword=氪金&customfullscreen=1&nonavigationbar=1",
+          "src": "https://tieba-ares.cdn.bcebos.com/mis/2025-11/1763373171560/010667f30651.webp"
+        },
+        {
+          "type": 0,
+          "text": "也不少总不能放着综合能力强的幻神不出只出个特种兵打拒马吧 感觉现在的人是思想固化了 以前都是研究黑科技而不是死盯一个所谓的幻神队伍 你也可能会想氪金那么多总不能不玩这种综合实力强的队伍吧 拒马就是克制基本一切物理阵容 但怕高爆发法师阵容"
+        }
+      ]
+    },
+    {
+      "bimg_url": "",
+      "ios_b_url": "",
+      "id": 153337934331,
+      "floor": 3,
+      "content": [
+        {
+          "type": 0,
+          "text": "第三个问题是账号交易限价的问题 号价行情我不怎么了解但是限价可能也是官方为了防止号贩子倒卖和玩家一时冲动导致流失的措施吧（这个限价也会误伤了一些价格真的卖不到那些的账号 毕竟这个限价是靠系统判定而不是人来判定的） 我如果能随意挂价格 现在这个行情差是对三战不好的 我可能会冲动上架 没人买我就低价抛 号贩子捡漏就拍了再卖 但是这个号人家也不会去怎么玩 相当于游戏少了一名玩家 正常要入坑的玩家也买不到正常价位的账号 而官方的限价也是让这个号能有正常的玩家继续玩下去"
+        }
+      ],
+      "is_ntitle": 0,
+      "ios_bimg_format": "",
+      "author_id": 1332890541,
+      "agree": {
+        "agree_num": 0,
+        "has_agree": 0,
+        "agree_type": 0,
+        "disagree_num": 0,
+        "diff_agree_num": 0
+      },
+      "is_fold": 0,
+      "fold_tip": "",
+      "is_top_agree_post": 0,
+      "show_squared": 0,
+      "need_log": 0,
+      "log_param": [
+        {
+          "key": "fid",
+          "value": "17961127"
+        },
+        {
+          "key": "tid",
+          "value": "10584752481"
+        },
+        {
+          "key": "card_type",
+          "value": "floor"
+        },
+        {
+          "key": "pid",
+          "value": "153337934331"
+        },
+        {
+          "key": "tag",
+          "value": "[]"
+        },
+        {
+          "key": "params",
+          "value": "{\"thread_type\":\"0\"}"
+        }
+      ],
+      "title": "回复：回归老玩家客观的讲些目前环境的问题",
+      "time": 1774373139,
+      "sub_post_number": 2,
+      "is_post_visible": 0,
+      "dynamic_url": ""
+    },
+    {
+      "floor": 4,
+      "bimg_url": "",
+      "need_log": 0,
+      "id": 153337935310,
+      "is_top_agree_post": 0,
+      "show_squared": 0,
+      "title": "回复：回归老玩家客观的讲些目前环境的问题",
+      "time": 1774373169,
+      "content": [
+        {
+          "type": 0,
+          "text": "最后我也有一年多没玩三战了 之前玩的三谋 优点也有很多 像自动铺路预约打城 开荒方便 抽卡可能对部分玩家来说比较便宜（月卡这种能全武将 满氪玩家也不会卡武将1个赛季1万就能继续满红 对买满红号的小氪玩家来说就是不怎么友好了） 缺点是 玩法深度不够 想肝都肝不了那种 撕卡严重 一个赛季撕一次 武将基本没用保值这个概念 三战我回坑这几天发现有挺多优化的改善 像减负的自动铺路 武勋换材料 材料转换 主城几队可以征兵也不怕没兵干瞪眼了 玩法深度也是越来越丰富 像是每个赛季都保留了一些特色在里面（可能一些一直在玩老玩家感觉不到吧，像我这种回坑的玩家是明显看到变化很大的）"
+        }
+      ],
+      "ios_bimg_format": "",
+      "author_id": 1332890541,
+      "is_post_visible": 0,
+      "fold_tip": "",
+      "dynamic_url": "",
+      "ios_b_url": "",
+      "is_ntitle": 0,
+      "sub_post_number": 2,
+      "agree": {
+        "disagree_num": 0,
+        "diff_agree_num": 0,
+        "agree_num": 0,
+        "has_agree": 0,
+        "agree_type": 0
+      },
+      "is_fold": 0,
+      "log_param": [
+        {
+          "key": "fid",
+          "value": "17961127"
+        },
+        {
+          "key": "tid",
+          "value": "10584752481"
+        },
+        {
+          "key": "card_type",
+          "value": "floor"
+        },
+        {
+          "value": "153337935310",
+          "key": "pid"
+        },
+        {
+          "key": "tag",
+          "value": "[]"
+        },
+        {
+          "key": "params",
+          "value": "{\"thread_type\":\"0\"}"
+        }
+      ]
+    },
+    {
+      "id": 153337950963,
+      "fold_tip": "",
+      "is_top_agree_post": 0,
+      "log_param": [
+        {
+          "key": "fid",
+          "value": "17961127"
+        },
+        {
+          "key": "tid",
+          "value": "10584752481"
+        },
+        {
+          "value": "floor",
+          "key": "card_type"
+        },
+        {
+          "key": "pid",
+          "value": "153337950963"
+        },
+        {
+          "key": "tag",
+          "value": "[]"
+        },
+        {
+          "key": "params",
+          "value": "{\"thread_type\":\"0\"}"
+        }
+      ],
+      "time": 1774373696,
+      "content": [
+        {
+          "text": "个人玩下来所有slg都有优缺点 之前的团友问怎么又玩三战了 我说外面也都是一坨 回来发现还是三战这坨是香的 看你自己是喜欢*味巧克力喜欢还是巧克力味的*",
+          "type": 0
+        }
+      ],
+      "bimg_url": "",
+      "agree": {
+        "has_agree": 0,
+        "agree_type": 0,
+        "disagree_num": 0,
+        "diff_agree_num": 0,
+        "agree_num": 0
+      },
+      "need_log": 0,
+      "is_fold": 0,
+      "show_squared": 0,
+      "title": "回复：回归老玩家客观的讲些目前环境的问题",
+      "floor": 5,
+      "is_ntitle": 0,
+      "sub_post_number": 0,
+      "ios_b_url": "",
+      "ios_bimg_format": "",
+      "author_id": 1332890541,
+      "is_post_visible": 0,
+      "dynamic_url": ""
+    }
+  ],
+  "thread": {
+    "author": {
+      "name_show": "明夜vs秋夜",
+      "fans_nickname": "",
+      "ala_info": {
+        "live_id": 0,
+        "location": "",
+        "live_status": 0
+      },
+      "thread_num": 0,
+      "agree_num": 0,
+      "id": 1332890541,
+      "name": "明夜vs秋夜",
+      "level_id": 8,
+      "is_like": 1,
+      "bawu_type": "",
+      "gender": 1,
+      "priv_sets": {
+        "like": 3
+      },
+      "ip_address": "浙江",
+      "is_bawu": 0,
+      "fans_num": 0,
+      "gift_num": 0,
+      "new_god_data": {
+        "field_id": 0
+      },
+      "portrait": "tb.1.5675fcac.iAcvcW3ZxNocnDH_TDtNgw?t=1774408796",
+      "type": 1,
+      "target_scheme": "",
+      "ala_live_info": {
+        "live_status": 0
+      },
+      "user_growth": {
+        "level_id": 6
+      },
+      "display_intro": "",
+      "iconinfo": [
+        {
+          "name": "starmaster",
+          "weight": 1,
+          "icon": "http://tb1.bdstatic.com/tb/cms/com/icon/file_1429670602958.png",
+          "value": 4,
+          "terminal": {
+            "pc": 1,
+            "wap": 1,
+            "client": 1
+          },
+          "position": {
+            "frs": 1,
+            "pb": 1,
+            "home": 1,
+            "card": 1
+          }
+        }
+      ],
+      "seal_prefix": "",
+      "display_auth_type": 0,
+      "level_name": "监军",
+      "scheme": "",
+      "has_concerned": 0
+    },
+    "is_multiforum_thread": 0,
+    "thread_album_id": 0,
+    "is_link_thread": 0,
+    "title": "归老玩家客观的讲些目前环境的问题",
+    "is_ntitle": 0,
+    "repost_num": 0,
+    "topic": {
+      "is_lpost": 0,
+      "link": ""
+    },
+    "collect_status": 0,
+    "post_id": 153337932805,
+    "agree": {
+      "agree_type": 0,
+      "disagree_num": 0,
+      "diff_agree_num": 22,
+      "agree_num": 22,
+      "has_agree": 0
+    },
+    "edit_info": {
+      "edit_status": 0,
+      "last_edit_time": 0,
+      "edit_from": 2
+    },
+    "thread_type": 0,
+    "is_bub": 0,
+    "zan": {
+      "num": 0,
+      "is_liked": 0,
+      "last_time": 0
+    },
+    "create_time": 1774373093,
+    "collect_mark_pid": "0",
+    "twzhibo_info": {
+      "user": {
+        "tw_anchor_info": {
+          "anchor_level": 0,
+          "in_black_list": 0,
+          "field_ex": ""
+        }
+      },
+      "is_copytwzhibo": 0
+    },
+    "origin_thread_info": {
+      "fid": 17961127,
+      "thread_type": 0,
+      "author": {
+        "id": 0,
+        "name": "",
+        "name_show": "",
+        "portrait": "",
+        "type": 0
+      },
+      "reply_num": 0,
+      "poll_info": {
+        "title": "",
+        "is_multi": 0,
+        "polled_value": "",
+        "is_polled": 0,
+        "end_time": 0,
+        "total_poll": 0,
+        "last_time": 0,
+        "total_num": 0,
+        "options_count": 0
+      },
+      "title": "回归老玩家客观的讲些目前环境的问题",
+      "content": [
+        {
+          "src": "",
+          "uid": 1332890541,
+          "static": "",
+          "is_native_app": 0,
+          "link": "",
+          "height": 0,
+          "packet_name": "",
+          "graffiti_info": {
+            "url": "",
+            "gid": 0
+          },
+          "item_id": 0,
+          "text": "@明夜vs秋夜：",
+          "bsize": "",
+          "width": 0,
+          "e_type": 0,
+          "meme_info": {
+            "thumbnail": "",
+            "width": 0,
+            "height": 0,
+            "detail_link": "",
+            "pck_id": 0,
+            "pic_id": 0,
+            "pic_url": ""
+          },
+          "origin_src": "",
+          "origin_size": 0,
+          "icon": "",
+          "type": 4,
+          "c": "",
+          "during_time": 0,
+          "dynamic": "",
+          "native_app": {
+            "download_ios": "",
+            "jump_ios": "",
+            "download_and": ""
+          }
+        },
+        {
+          "c": "",
+          "dynamic": "",
+          "static": "",
+          "origin_size": 0,
+          "meme_info": {
+            "detail_link": "",
+            "pck_id": 0,
+            "pic_id": 0,
+            "pic_url": "",
+            "thumbnail": "",
+            "width": 0,
+            "height": 0
+          },
+          "item_id": 0,
+          "icon": "",
+          "type": 0,
+          "link": "",
+          "bsize": "",
+          "uid": 0,
+          "packet_name": "",
+          "native_app": {
+            "jump_ios": "",
+            "download_and": "",
+            "download_ios": ""
+          },
+          "e_type": 0,
+          "origin_src": "",
+          "graffiti_info": {
+            "url": "",
+            "gid": 0
+          },
+          "text": "第一个最简单的逻辑 氪几十万的大佬肯定不会跟一个月卡或者断氪党打个有来有回吧 基本所有的游戏不都是这种道理嘛 （除了一些只卖皮肤不卖数值的游戏LOL CSGO这样的） 谁氪的多谁就厉害很正常的 总不能人家花你几倍的钱还跟你玩石头剪刀布吧",
+          "during_time": 0,
+          "height": 0,
+          "is_native_app": 0,
+          "src": "",
+          "width": 0
+        }
+      ],
+      "is_new_style": 1,
+      "ori_ugc_info": {
+        "ori_ugc_nid": "",
+        "ori_ugc_tid": "",
+        "ori_ugc_vid": ""
+      },
+      "agree": {
+        "agree_num": 0,
+        "has_agree": 0,
+        "agree_type": 0,
+        "disagree_num": 0,
+        "diff_agree_num": 0
+      },
+      "shared_num": 0,
+      "item": {
+        "score": 0,
+        "button_name": "",
+        "button_link": "",
+        "item_appid": "",
+        "apk_name": "",
+        "item_name": "",
+        "icon_size": 0,
+        "star": 0,
+        "button_link_type": 0,
+        "forum_name": "",
+        "apk_detail": {
+          "need_inner_buy": 0,
+          "authority_url": "",
+          "version": "",
+          "update_time": "",
+          "need_network": 0,
+          "size": "",
+          "privacy_url": "",
+          "developer": "",
+          "publisher": "",
+          "version_code": 0
+        },
+        "item_id": 0,
+        "icon_url": ""
+      },
+      "is_frs_mask": 0,
+      "abstract": [
+        {
+          "type": 0,
+          "text": "第一个最简单的逻辑 氪几十万的大佬肯定不会跟一个月卡或者断氪党打个有来有回吧 基本所有的游戏不都是这种道理嘛 （除了一些只卖皮肤不卖数值的游戏LOL CSGO这样的） 谁氪的多谁就厉害很正常的 总不能人家花你几倍的钱还跟你玩石头剪刀布吧"
+        }
+      ],
+      "tid": "10584752481",
+      "ala_info": {
+        "user_info": {
+          "user_name": "",
+          "portrait": ""
+        },
+        "live_id": 0,
+        "cover": "",
+        "session_id": "",
+        "rtmp_url": "",
+        "hls_url": ""
+      },
+      "fname": "三国志战略版",
+      "is_deleted": 0
+    },
+    "is_share_thread": 0,
+    "t_share_img": "",
+    "is_pictxt": 0,
+    "id": 10584752481,
+    "is_membertop": 0,
+    "share_num": 0,
+    "collect_num": 1,
+    "is_excellent_thread": 0,
+    "reply_num": 47,
+    "robot_thread_type": 0,
+    "pids": "153337932805,153337933794,153337934331,153337935310,153337950963,",
+    "agree_num": 22,
+    "is_partial_visible": 0
+  },
+  "server_time": 207667,
+  "has_fold_comment": 0,
+  "forum": {
+    "post_num": 13731845,
+    "deleted_reason_info": {
+      "is_grays_cale_forum": 1,
+      "is_boomgrow": 0
+    },
+    "is_frs_mask": 0,
+    "id": 17961127,
+    "avatar": "https://tiebapic.baidu.com/forum/w%3D120%3Bh%3D120/sign=02165d09340e0cf3a0f74af93a7d9a22/bd315c6034a85edf1ff50e380f540923dd5475b4.jpg?tbpicau=2026-04-05-05_1a4652bde0a70ffb9ffccd970b0c0db0",
+    "first_class": "游戏",
+    "second_class": "手机游戏",
+    "member_num": 648957,
+    "show_info": {
+      "content": "志吞山河谈笑间，重回群英闪耀时",
+      "show_type": 3
+    },
+    "name": "三国志战略版",
+    "is_exists": 1,
+    "is_liked": 0,
+    "is_brand_forum": 0
+  },
+  "ad_show_select": -1,
+  "time": 1774408796
+}
