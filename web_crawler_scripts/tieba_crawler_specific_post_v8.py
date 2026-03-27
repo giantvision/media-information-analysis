@@ -19,16 +19,6 @@
   python tieba_crawler_specific_post_v5.py <帖子URL或帖子ID>
   python tieba_crawler_specific_post_v5.py https://tieba.baidu.com/p/10591110434
   python tieba_crawler_specific_post_v5.py 10591110434
-
-  # https://tieba.baidu.com/p/10591110434?fr=frs
-
-核心改进：
-  1. 使用贴吧客户端 API（tiebac.baidu.com/c/f/pb/page）获取帖子内容
-     - 该接口需要 MD5 签名但不需要登录
-     - 返回完整的帖子内容（文字、图片、视频等）
-  2. 使用客户端 API（c/f/pb/floor）获取楼中楼子评论
-  3. 移动端 Web API 作为备用方案
-  4. 时间戳自动格式化
 """
 
 import re
@@ -55,27 +45,21 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # 常量
 # ============================================================
-# 贴吧客户端 API（主要方案）
 CLIENT_API_URL = "https://tiebac.baidu.com/c/f/pb/page"
-# 楼中楼子评论 API（客户端）
 CLIENT_FLOOR_API_URL = "https://tiebac.baidu.com/c/f/pb/floor"
-# 移动端 Web API（备用方案）
 MOBILE_API_URL = "https://tieba.baidu.com/mg/p/getPbData"
 
-# 客户端签名密钥（公开的贴吧客户端签名 salt）
 SIGN_KEY = "tiebaclient!!!"
 
-# 通用客户端参数
 CLIENT_COMMON_PARAMS = {
-    "_client_type": "2",        # 2=Android
+    "_client_type": "2",
     "_client_version": "12.57.1.0",
-    "_os_version": "33",        # Android 13
+    "_os_version": "33",
     "_phone_imei": "000000000000000",
     "from": "tieba",
     "cuid": "baidutiebaapp",
 }
 
-# 请求头
 CLIENT_HEADERS = {
     "User-Agent": "bdtb for Android 12.57.1.0",
     "Content-Type": "application/x-www-form-urlencoded",
@@ -96,7 +80,6 @@ MOBILE_HEADERS = {
     "Referer": "https://tieba.baidu.com/",
 }
 
-# 请求间隔（秒）—— 尊重服务器
 REQUEST_DELAY = 1.0
 
 
@@ -104,7 +87,6 @@ REQUEST_DELAY = 1.0
 # 工具函数
 # ============================================================
 def extract_tid(url_or_id: str) -> str:
-    """从 URL 或纯数字中提取帖子 ID (tid)"""
     url_or_id = url_or_id.strip()
     if url_or_id.isdigit():
         return url_or_id
@@ -115,7 +97,6 @@ def extract_tid(url_or_id: str) -> str:
 
 
 def clean_text(text: str) -> str:
-    """清理文本中的多余空白"""
     if not text:
         return ""
     text = re.sub(r'\s+', ' ', text)
@@ -123,7 +104,6 @@ def clean_text(text: str) -> str:
 
 
 def safe_int(val, default=0):
-    """安全转换为整数"""
     if val is None:
         return default
     try:
@@ -138,12 +118,11 @@ def safe_int(val, default=0):
 
 
 def format_timestamp(ts) -> str:
-    """将 Unix 时间戳格式化为可读时间字符串"""
     if not ts:
         return ""
     try:
         ts_val = int(ts)
-        if ts_val > 1e12:  # 毫秒时间戳
+        if ts_val > 1e12:
             ts_val = ts_val // 1000
         return datetime.fromtimestamp(ts_val).strftime("%Y-%m-%d %H:%M:%S")
     except (ValueError, TypeError, OSError):
@@ -151,38 +130,190 @@ def format_timestamp(ts) -> str:
 
 
 def calc_sign(params: dict) -> str:
-    """
-    计算贴吧客户端 API 的签名
-    规则：将所有参数按 key 排序，拼接为 key=value 格式，
-    末尾加上 SIGN_KEY，然后计算 MD5
-    """
     sorted_params = sorted(params.items())
     sign_str = ''.join(f"{k}={v}" for k, v in sorted_params)
     sign_str += SIGN_KEY
     return hashlib.md5(sign_str.encode('utf-8')).hexdigest()
 
 
+def _extract_user_from_author_dict(author_dict: dict) -> dict:
+    if not isinstance(author_dict, dict):
+        return {}
+    uid = str(author_dict.get('id', ''))
+    if not uid:
+        return {}
+    return {
+        "user_id": uid,
+        "user_name": author_dict.get('name', ''),
+        "nick_name": author_dict.get('name_show', '') or author_dict.get('name', '') or author_dict.get('nick_name', ''),
+        "level_id": safe_int(author_dict.get('level_id', 0)),
+        "portrait": author_dict.get('portrait', ''),
+        "ip_address": author_dict.get('ip_address', ''),
+    }
+
+
+def _resolve_sub_comment_user(sp: dict, user_map: dict) -> tuple:
+    sp_uid = str(sp.get('author_id', ''))
+    sp_author = sp.get('author', {})
+    if not sp_uid and isinstance(sp_author, dict):
+        sp_uid = str(sp_author.get('id', ''))
+
+    if sp_uid and sp_uid in user_map:
+        sp_name = (user_map[sp_uid].get('nick_name', '')
+                   or user_map[sp_uid].get('name_show', '')
+                   or user_map[sp_uid].get('user_name', ''))
+        if sp_name:
+            return sp_uid, sp_name
+
+    if isinstance(sp_author, dict) and sp_author:
+        extracted = _extract_user_from_author_dict(sp_author)
+        if extracted:
+            if extracted['user_id'] not in user_map:
+                user_map[extracted['user_id']] = extracted
+            elif not user_map[extracted['user_id']].get('nick_name'):
+                user_map[extracted['user_id']].update(
+                    {k: v for k, v in extracted.items() if v}
+                )
+            sp_name = extracted.get('nick_name', '') or extracted.get('user_name', '')
+            if sp_name:
+                return sp_uid or extracted['user_id'], sp_name
+
+    return sp_uid, ''
+
+
+def _resolve_reply_to(sp: dict, user_map: dict) -> dict:
+    """
+    从子评论元数据中解析「被回复者」信息。
+
+    修复说明：
+      楼中楼 API 中，被回复者信息编码在 content 块里：
+        content[0]: type=0, text="回复 "
+        content[1]: type=4, uid=被回复者uid, text=被回复者昵称   ← 关键修复
+        content[2]: type=0, text=" :正文..."
+
+      type=4 + 有 uid → 被回复用户（@mention），不是表情。
+      原代码仅检查 type=11 和 title 字段，导致被回复者名字丢失。
+    """
+    if not isinstance(sp, dict):
+        return {}
+
+    reply_uid = ''
+    reply_name = ''
+
+    # === 策略1（核心修复）：从 content 块中的 type=4（含uid）提取被回复者 ===
+    # 结构：["回复 ", {type=4, uid=xxx, text="昵称"}, " :正文"]
+    content_blocks = sp.get('content', [])
+    if isinstance(content_blocks, list):
+        for block in content_blocks:
+            if not isinstance(block, dict):
+                continue
+            btype = str(block.get('type', ''))
+
+            # ★ 关键修复：type=4 + uid 不是表情，是被回复的用户
+            if btype == '4':
+                block_uid = str(block.get('uid', ''))
+                if block_uid and block_uid != '0':
+                    reply_uid = block_uid
+                    reply_name = block.get('text', '')
+                    # 如果 user_map 中有更完整的昵称，优先使用
+                    if reply_uid in user_map:
+                        u = user_map[reply_uid]
+                        reply_name = (u.get('nick_name', '')
+                                      or u.get('name_show', '')
+                                      or u.get('user_name', '')
+                                      or reply_name)
+                    break  # 一条子评论只有一个被回复者
+
+            # 兼容：部分 API 版本用 type=11
+            elif btype == '11':
+                block_uid = str(block.get('uid', ''))
+                if block_uid and block_uid != '0':
+                    reply_uid = block_uid
+                    if not reply_name:
+                        reply_name = (block.get('name_show', '')
+                                      or block.get('name', '')
+                                      or block.get('text', ''))
+                    break
+
+    # === 策略2：title 字段（部分版本 API）===
+    if not reply_name:
+        title = sp.get('title', '')
+        if isinstance(title, str) and title.strip():
+            reply_name = title.strip()
+
+    # === 策略3：兼容其他 API 版本的专用字段 ===
+    if not reply_uid and not reply_name:
+        for key in ('reply_to_id', 'reply_uid', 'reply_to_user_id'):
+            val = sp.get(key)
+            if val and str(val) != '0':
+                reply_uid = str(val)
+                break
+        for key in ('reply_to_user', 'replyUser', 'reply_user'):
+            obj = sp.get(key, {})
+            if isinstance(obj, dict) and obj:
+                if not reply_uid:
+                    reply_uid = str(obj.get('id', ''))
+                if not reply_name:
+                    reply_name = (obj.get('name_show', '')
+                                  or obj.get('name', ''))
+                break
+
+    # === 用 reply_name 反查 user_map 补全 uid ===
+    if reply_name and not reply_uid:
+        for uid, u in user_map.items():
+            if (u.get('nick_name') == reply_name
+                    or u.get('name_show') == reply_name
+                    or u.get('user_name') == reply_name):
+                reply_uid = uid
+                break
+
+    # === 用 reply_uid 查 user_map 补全 name ===
+    if reply_uid and not reply_name and reply_uid in user_map:
+        u = user_map[reply_uid]
+        reply_name = (u.get('nick_name', '')
+                      or u.get('name_show', '')
+                      or u.get('user_name', ''))
+
+    if reply_uid or reply_name:
+        return {"uid": reply_uid, "name": reply_name}
+    return {}
+
+
+def _fix_content_reply_to(content: str, reply_to: dict) -> str:
+    """
+    修复子评论正文中缺失的被回复者名字。
+    将 "回复 \\n :" 等残缺格式替换为 "回复 @{name} :"
+    """
+    if not reply_to or not reply_to.get('name'):
+        return content
+
+    name = reply_to['name']
+    pattern = r'回复\s*(?:@用户\d+)?\s*\n?\s*:'
+    replacement = f'回复 @{name} :'
+    fixed = re.sub(pattern, replacement, content, count=1)
+    return fixed
+
+
 def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
     """
-    解析客户端 API 返回的 content 结构化内容块
+    解析客户端 API 返回的 content 结构化内容块。
     返回 (纯文本, 图片列表)
 
-    Args:
-        content_blocks: 内容块列表或字符串
-        user_map: {user_id_str: user_info_dict} 用于解析 @用户 时回填昵称
+    ★ 修复说明：
+      type=4 分两种情况：
+        - 有 uid 字段 → 被回复的用户（@mention），提取 text 作为昵称
+        - 无 uid 字段 → 贴吧自带表情图片，跳过
+      原代码对 type=4 一律 pass，导致被回复者昵称从正文中消失。
     """
     text_parts = []
     images = []
 
     if not content_blocks:
         return "", []
-
     if isinstance(content_blocks, str):
         return content_blocks.strip(), []
-
     if not isinstance(content_blocks, list):
         return str(content_blocks).strip(), []
-
     if user_map is None:
         user_map = {}
 
@@ -198,16 +329,19 @@ def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
             text = block.get('text', '')
             if text:
                 text_parts.append(text)
+
         elif block_type == '1':
             # 链接
             link = block.get('link', '') or block.get('text', '')
             if link:
                 text_parts.append(link)
+
         elif block_type == '2':
-            # 表情（文字表情）
+            # 贴吧文字表情
             c = block.get('c', '') or block.get('text', '')
             if c:
                 text_parts.append(c)
+
         elif block_type == '3':
             # 图片
             img_url = (block.get('origin_src', '')
@@ -218,53 +352,97 @@ def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
                 if img_url.startswith('//'):
                     img_url = 'https:' + img_url
                 images.append(img_url)
+
         elif block_type == '4':
-            # 表情图片（贴吧自带表情）
-            pass
+            # ★ 核心修复：type=4 分两种情况
+            uid = str(block.get('uid', ''))
+            if uid and uid != '0':
+                # 有 uid → 被回复的用户（@mention），不是表情
+                name = block.get('text', '')
+                # 尝试从 user_map 获取更完整的昵称
+                if uid in user_map:
+                    u = user_map[uid]
+                    name = (u.get('nick_name', '')
+                            or u.get('name_show', '')
+                            or u.get('user_name', '')
+                            or name)
+                if name:
+                    text_parts.append(name)
+                elif uid:
+                    text_parts.append(f'@用户{uid}')
+            else:
+                # 无 uid → 贴吧自带表情图片，跳过
+                pass
+
         elif block_type == '5':
             # 视频
             video_url = block.get('link', '') or block.get('text', '')
             if video_url:
                 text_parts.append(f'[视频: {video_url}]')
+
         elif block_type == '9':
             # 电话号码
             text = block.get('text', '')
             if text:
                 text_parts.append(text)
+
         elif block_type == '10':
             # 语音
             text_parts.append('[语音]')
+
         elif block_type == '11':
-            # @用户 —— 关键修复：text 可能为空，需要从 uid 反查用户名
+            # @用户 mention（部分 API 版本）
             text = block.get('text', '')
             if text:
                 text_parts.append(text)
             else:
-                # text 为空时，尝试通过 uid 从 user_map 查找昵称
                 uid = str(block.get('uid', ''))
+                resolved_name = ''
+
                 if uid and uid in user_map:
                     u = user_map[uid]
-                    name = u.get('name_show', '') or u.get('name', '') or u.get('nick_name', '')
-                    if name:
-                        text_parts.append(f'@{name}')
+                    resolved_name = (u.get('name_show', '')
+                                     or u.get('nick_name', '')
+                                     or u.get('name', '')
+                                     or u.get('user_name', ''))
+
+                if not resolved_name:
+                    resolved_name = (block.get('name_show', '')
+                                     or block.get('name', '')
+                                     or block.get('nick_name', ''))
+                    if resolved_name and uid and uid not in user_map:
+                        user_map[uid] = {
+                            "user_id": uid,
+                            "user_name": resolved_name,
+                            "nick_name": resolved_name,
+                            "name_show": resolved_name,
+                        }
+
+                if resolved_name:
+                    text_parts.append(f'@{resolved_name}')
                 elif uid:
-                    # user_map 中也没有，保留 uid 作为标识
                     text_parts.append(f'@用户{uid}')
+
         elif block_type == '18':
             # 话题标签
             text = block.get('text', '')
             if text:
                 text_parts.append(text)
+
         elif block_type == '20':
-            # 小视频/短视频
+            # 短视频
             text_parts.append('[短视频]')
+
         else:
-            # 未知类型，尝试提取文本
+            # 未知类型，保守提取文本
             text = block.get('text', '')
             if text:
                 text_parts.append(text)
 
+    # 修改后
     content = '\n'.join(text_parts).strip()
+    # 修复回复格式：将 "回复 \n昵称\n :" 统一替换为 "回复 (昵称) :"
+    content = re.sub(r'(回复\s*)\n(.+?)\n(\s*:)', r'\1(\2)\3', content)
     return content, images
 
 
@@ -272,16 +450,14 @@ def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
 # 核心爬虫类
 # ============================================================
 class TiebaPostScraper:
-    """百度贴吧帖子爬虫 v2 - 客户端API + 移动端API双模式"""
 
     def __init__(self, tid: str, max_pages: int = 100, fetch_sub_comments: bool = True):
         self.tid = tid
         self.max_pages = max_pages
         self.fetch_sub_comments = fetch_sub_comments
         self.session = requests.Session()
-        self._user_map = {}  # {uid_str: user_info_dict} 全局用户信息映射
+        self._user_map = {}
 
-        # 最终结果
         self.result = {
             "post_id": tid,
             "post_url": f"https://tieba.baidu.com/p/{tid}",
@@ -301,14 +477,10 @@ class TiebaPostScraper:
     # ----------------------------------------------------------
     # 网络请求
     # ----------------------------------------------------------
-    def _get(self, url: str, params: dict = None, headers: dict = None,
-             timeout: int = 15) -> Optional[requests.Response]:
-        """带重试的 GET 请求"""
+    def _get(self, url, params=None, headers=None, timeout=15):
         for attempt in range(3):
             try:
-                resp = self.session.get(
-                    url, params=params, headers=headers, timeout=timeout
-                )
+                resp = self.session.get(url, params=params, headers=headers, timeout=timeout)
                 resp.raise_for_status()
                 return resp
             except requests.RequestException as e:
@@ -317,14 +489,10 @@ class TiebaPostScraper:
                     time.sleep(REQUEST_DELAY * (attempt + 1))
         return None
 
-    def _post(self, url: str, data: dict = None, headers: dict = None,
-              timeout: int = 15) -> Optional[requests.Response]:
-        """带重试的 POST 请求"""
+    def _post(self, url, data=None, headers=None, timeout=15):
         for attempt in range(3):
             try:
-                resp = self.session.post(
-                    url, data=data, headers=headers, timeout=timeout
-                )
+                resp = self.session.post(url, data=data, headers=headers, timeout=timeout)
                 resp.raise_for_status()
                 return resp
             except requests.RequestException as e:
@@ -334,17 +502,15 @@ class TiebaPostScraper:
         return None
 
     # ----------------------------------------------------------
-    # 方案一：贴吧客户端 API（主要方案）
+    # 方案一：贴吧客户端 API
     # ----------------------------------------------------------
     def _build_client_params(self, extra_params: dict) -> dict:
-        """构建客户端 API 请求参数（含签名）"""
         params = dict(CLIENT_COMMON_PARAMS)
         params.update(extra_params)
         params['sign'] = calc_sign(params)
         return params
 
     def _scrape_via_client_api(self) -> bool:
-        """通过贴吧客户端 API 获取帖子数据"""
         logger.info("使用贴吧客户端 API 方式...")
 
         page_num = 1
@@ -354,8 +520,8 @@ class TiebaPostScraper:
             params = self._build_client_params({
                 "kz": self.tid,
                 "pn": str(page_num),
-                "rn": "30",         # 每页30条
-                "lz": "0",          # 0=全部, 1=只看楼主
+                "rn": "30",
+                "lz": "0",
                 "r": str(int(time.time())),
             })
 
@@ -374,7 +540,6 @@ class TiebaPostScraper:
                     return False
                 break
 
-            # 检查返回状态
             error_code = data.get('error_code', '') or data.get('error', {}).get('errno', '')
             if str(error_code) != '0' and str(error_code) != '':
                 error_msg = data.get('error_msg', '') or data.get('error', {}).get('errmsg', '')
@@ -383,14 +548,11 @@ class TiebaPostScraper:
                     return False
                 break
 
-            # 第一页提取元信息
             if page_num == 1:
                 self._parse_client_meta(data)
 
-            # 提取楼层
             post_list = data.get('post_list', [])
             if not post_list:
-                # 兼容不同嵌套结构
                 post_list = data.get('data', {}).get('post_list', [])
 
             if not post_list:
@@ -404,7 +566,6 @@ class TiebaPostScraper:
             self.result['comments'].extend(page_comments)
             logger.info(f"  -> 本页获取 {len(page_comments)} 条评论")
 
-            # 检查是否最后一页
             page_info = data.get('page', {}) or data.get('data', {}).get('page', {})
             total_pages = safe_int(page_info.get('total_page', 0))
             if total_pages > 0:
@@ -413,7 +574,6 @@ class TiebaPostScraper:
                 logger.info("已到达最后一页")
                 break
 
-            # 也检查 has_more 字段
             has_more = page_info.get('has_more', '1')
             if str(has_more) == '0':
                 logger.info("has_more=0，已到达最后一页")
@@ -425,8 +585,6 @@ class TiebaPostScraper:
         return len(self.result['comments']) > 0
 
     def _parse_client_meta(self, data: dict):
-        """从客户端 API 响应中提取帖子元信息"""
-        # 帖子信息可能在不同层级
         thread = data.get('thread', {}) or data.get('data', {}).get('thread', {})
         forum = data.get('forum', {}) or data.get('data', {}).get('forum', {})
         page_info = data.get('page', {}) or data.get('data', {}).get('page', {})
@@ -437,7 +595,6 @@ class TiebaPostScraper:
         self.result['share_count'] = safe_int(thread.get('share_num', 0))
         self.result['total_pages'] = safe_int(page_info.get('total_page', 0))
 
-        # thread.author 是完整字典，直接提取
         author = thread.get('author', {})
         if isinstance(author, dict) and author.get('id'):
             self.result['author'] = {
@@ -449,16 +606,12 @@ class TiebaPostScraper:
             }
 
     def _parse_client_posts(self, post_list: list, full_data: dict) -> list:
-        """解析客户端 API 返回的帖子列表"""
         comments = []
         thread = full_data.get('thread', {}) or full_data.get('data', {}).get('thread', {})
         thread_author_id = str(thread.get('author', {}).get('id', ''))
 
-        # 构建 user_map：完整用户信息在顶层 user_list 中，
-        # 每个 post 只有 author_id（纯数字），没有 author 字典
-        # 跨页累积，而不是每页重建
         user_list = full_data.get('user_list', []) or full_data.get('data', {}).get('user_list', [])
-        user_map = self._user_map  # 复用已有的，跨页累积
+        user_map = self._user_map
         for u in user_list:
             if isinstance(u, dict):
                 uid = str(u.get('id', ''))
@@ -472,7 +625,6 @@ class TiebaPostScraper:
                         "ip_address": u.get('ip_address', ''),
                     }
 
-        # 也把 thread.author 加进来（它是完整的字典）
         t_author = thread.get('author', {})
         if isinstance(t_author, dict) and t_author.get('id'):
             t_uid = str(t_author['id'])
@@ -486,26 +638,34 @@ class TiebaPostScraper:
                     "ip_address": t_author.get('ip_address', ''),
                 }
 
-        # 存储到实例，供子评论解析时使用
         self._user_map = user_map
 
         for post in post_list:
             floor_num = safe_int(post.get('floor', 0))
             post_id = str(post.get('id', ''))
-
-            # ★ 关键修复：post 中没有 author 字典，只有 author_id 字段
             uid = str(post.get('author_id', ''))
 
-            # 从 user_map 查找完整用户信息
             if uid and uid in user_map:
                 u_info = user_map[uid]
                 user_name = u_info.get('user_name', '')
                 nick_name = u_info.get('nick_name', '') or user_name
                 level_id = u_info.get('level_id', 0)
             else:
-                user_name = ''
-                nick_name = ''
-                level_id = 0
+                post_author = post.get('author', {})
+                if isinstance(post_author, dict) and post_author:
+                    extracted = _extract_user_from_author_dict(post_author)
+                    if extracted and extracted.get('user_id'):
+                        uid = uid or extracted['user_id']
+                        user_name = extracted.get('user_name', '')
+                        nick_name = extracted.get('nick_name', '') or user_name
+                        level_id = extracted.get('level_id', 0)
+                        user_map[uid] = extracted
+                    else:
+                        user_name = nick_name = ''
+                        level_id = 0
+                else:
+                    user_name = nick_name = ''
+                    level_id = 0
 
             user = {
                 "user_id": uid,
@@ -515,15 +675,12 @@ class TiebaPostScraper:
                 "is_author": uid == thread_author_id and uid != '',
             }
 
-            # 解析内容块（传入 user_map 以解析 @用户）
             content_blocks = post.get('content', [])
             text_content, images = parse_content_blocks(content_blocks, user_map)
 
-            # 发帖时间
             raw_time = post.get('time', 0)
             post_time = format_timestamp(raw_time)
 
-            # 点赞数
             agree_info = post.get('agree', {})
             like_count = 0
             if isinstance(agree_info, dict):
@@ -531,18 +688,15 @@ class TiebaPostScraper:
             elif isinstance(agree_info, (int, str)):
                 like_count = safe_int(agree_info)
 
-            # 子评论数
-            sub_post_info = post.get('sub_post_number', 0)
-            sub_comment_count = safe_int(sub_post_info)
+            sub_comment_count = safe_int(post.get('sub_post_number', 0))
 
-            # 第1楼是主帖：存到 result 元数据，但不加入 comments 列表
             if floor_num == 1:
                 self.result['content'] = text_content
                 self.result['content_images'] = images
                 self.result['create_time'] = post_time
                 self.result['like_count'] = like_count
                 self.result['author'] = user
-                continue  # 跳过，不加入 comments
+                continue
 
             comment = {
                 "floor": floor_num,
@@ -556,29 +710,37 @@ class TiebaPostScraper:
                 "sub_comments": [],
             }
 
-            # 客户端 API 可能已包含部分子评论
             sub_post_list = post.get('sub_post_list', {})
             if isinstance(sub_post_list, dict):
                 sub_posts = sub_post_list.get('sub_post_list', [])
                 if sub_posts:
                     for sp in sub_posts:
-                        # 子评论也可能只有 author_id
-                        sp_uid = str(sp.get('author_id', ''))
-                        if not sp_uid:
-                            sp_author = sp.get('author', {})
-                            sp_uid = str(sp_author.get('id', '')) if isinstance(sp_author, dict) else ''
-                        sp_name = ''
-                        if sp_uid and sp_uid in user_map:
-                            sp_name = user_map[sp_uid].get('nick_name', '')
+                        _resolve_sub_comment_user(sp, user_map)
+                        _resolve_reply_to(sp, user_map)
+                    for sp in sub_posts:
+                        sp_uid, sp_name = _resolve_sub_comment_user(sp, user_map)
+                        reply_to = _resolve_reply_to(sp, user_map)
 
                         sp_content_blocks = sp.get('content', [])
                         sp_text, sp_images = parse_content_blocks(sp_content_blocks, user_map)
+
+                        if reply_to:
+                            sp_text = _fix_content_reply_to(sp_text, reply_to)
+                        elif '回复' in sp_text and re.search(r'回复\s*\n?\s*:', sp_text):
+                            logger.warning(
+                                f"无法解析内联子评论的被回复者: "
+                                f"title='{sp.get('title', '')}', "
+                                f"author={sp.get('author', {}).get('name_show', '?')}"
+                            )
+
                         sub_comment = {
                             "user_name": sp_name,
                             "user_id": sp_uid,
                             "content": sp_text,
                             "time": format_timestamp(sp.get('time', 0)),
                         }
+                        if reply_to and reply_to.get('name'):
+                            sub_comment['reply_to'] = reply_to
                         if sp_images:
                             sub_comment['images'] = sp_images
                         comment['sub_comments'].append(sub_comment)
@@ -591,12 +753,10 @@ class TiebaPostScraper:
     # 楼中楼子评论爬取（客户端 API）
     # ----------------------------------------------------------
     def _fetch_sub_comments_client(self, tid: str, pid: str, total: int) -> list:
-        """通过客户端 API 爬取楼中楼子评论"""
         sub_comments = []
         page = 1
         max_sub_pages = (total // 10) + 2
-        # 使用已有的 user_map，并在过程中扩展
-        user_map = getattr(self, '_user_map', {})
+        user_map = self._user_map
 
         while page <= max_sub_pages:
             params = self._build_client_params({
@@ -619,21 +779,29 @@ class TiebaPostScraper:
             if str(error_code) != '0' and str(error_code) != '':
                 break
 
-            # 楼中楼 API 也可能有 user_list，合并到 user_map
             floor_user_list = data.get('user_list', []) or data.get('data', {}).get('user_list', [])
             for u in floor_user_list:
                 if isinstance(u, dict):
                     uid = str(u.get('id', ''))
-                    if uid and uid not in user_map:
-                        user_map[uid] = {
-                            "user_id": uid,
-                            "user_name": u.get('name', ''),
-                            "name_show": u.get('name_show', '') or u.get('name', ''),
-                            "nick_name": u.get('name_show', '') or u.get('name', ''),
-                            "level_id": safe_int(u.get('level_id', 0)),
-                        }
+                    if uid:
+                        if uid not in user_map:
+                            user_map[uid] = {
+                                "user_id": uid,
+                                "user_name": u.get('name', ''),
+                                "name_show": u.get('name_show', '') or u.get('name', ''),
+                                "nick_name": u.get('name_show', '') or u.get('name', ''),
+                                "level_id": safe_int(u.get('level_id', 0)),
+                            }
+                        else:
+                            existing = user_map[uid]
+                            if not existing.get('nick_name') and not existing.get('name_show'):
+                                new_name = u.get('name_show', '') or u.get('name', '')
+                                if new_name:
+                                    existing['nick_name'] = new_name
+                                    existing['name_show'] = new_name
+                                    if not existing.get('user_name'):
+                                        existing['user_name'] = u.get('name', '')
 
-            # 提取子评论列表
             subpost_list = data.get('subpost_list', [])
             if not subpost_list:
                 subpost_list = data.get('data', {}).get('subpost_list', [])
@@ -641,20 +809,27 @@ class TiebaPostScraper:
             if not subpost_list:
                 break
 
+            # ★ 第一遍：预扫描所有子评论的作者 + 被回复者写入 user_map
             for sp in subpost_list:
-                # 子评论同样可能只有 author_id 而没有 author 字典
-                sp_uid = str(sp.get('author_id', ''))
-                if not sp_uid:
-                    sp_author = sp.get('author', {})
-                    if isinstance(sp_author, dict):
-                        sp_uid = str(sp_author.get('id', ''))
+                _resolve_sub_comment_user(sp, user_map)
+                _resolve_reply_to(sp, user_map)
 
-                sp_name = ''
-                if sp_uid and sp_uid in user_map:
-                    sp_name = user_map[sp_uid].get('nick_name', '')
+            # ★ 第二遍：解析内容（此时 user_map 已包含本批所有用户）
+            for sp in subpost_list:
+                sp_uid, sp_name = _resolve_sub_comment_user(sp, user_map)
+                reply_to = _resolve_reply_to(sp, user_map)
 
                 sp_content_blocks = sp.get('content', [])
                 sp_text, sp_images = parse_content_blocks(sp_content_blocks, user_map)
+
+                if reply_to:
+                    sp_text = _fix_content_reply_to(sp_text, reply_to)
+                elif '回复' in sp_text and re.search(r'回复\s*\n?\s*:', sp_text):
+                    logger.warning(
+                        f"无法解析子评论的被回复者: "
+                        f"title='{sp.get('title', '')}', "
+                        f"author={sp.get('author', {}).get('name_show', '?')}"
+                    )
 
                 sub_comment = {
                     "user_name": sp_name,
@@ -662,6 +837,8 @@ class TiebaPostScraper:
                     "content": sp_text,
                     "time": format_timestamp(sp.get('time', 0)),
                 }
+                if reply_to and reply_to.get('name'):
+                    sub_comment['reply_to'] = reply_to
                 if sp_images:
                     sub_comment['images'] = sp_images
                 sub_comments.append(sub_comment)
@@ -675,7 +852,6 @@ class TiebaPostScraper:
     # 方案二：移动端 Web API（备用）
     # ----------------------------------------------------------
     def _scrape_via_mobile_api(self) -> bool:
-        """通过移动端 API 获取帖子数据"""
         logger.info("尝试移动端 Web API 方式...")
 
         page_num = 1
@@ -708,18 +884,15 @@ class TiebaPostScraper:
                     return False
                 break
 
-            # 第一页解析元信息
             if page_num == 1:
                 api_data = data.get('data', {})
                 thread_data = api_data.get('thread', {})
                 forum_data = api_data.get('forum', {})
-
                 self.result['title'] = thread_data.get('title', '')
                 self.result['forum_name'] = forum_data.get('name', '')
                 self.result['total_replies'] = safe_int(thread_data.get('reply_num', 0))
                 self.result['share_count'] = safe_int(thread_data.get('share_num', 0))
 
-            # 解析帖子列表
             post_list = data.get('data', {}).get('post_list', [])
             if not post_list:
                 if page_num == 1:
@@ -733,7 +906,6 @@ class TiebaPostScraper:
                 author = post.get('author', {})
                 floor_num = safe_int(post.get('floor', 0))
 
-                # 解析内容（移动端可能返回结构化内容或纯文本）
                 content_raw = post.get('content', '')
                 if isinstance(content_raw, list):
                     text_content, images = parse_content_blocks(content_raw)
@@ -744,7 +916,6 @@ class TiebaPostScraper:
                     text_content = str(content_raw) if content_raw else ''
                     images = []
 
-                # 如果内容为空，尝试从 first_post_content 获取（仅主楼）
                 if not text_content and floor_num == 1:
                     first_content = thread_data.get('first_post_content', '')
                     if first_content:
@@ -777,11 +948,10 @@ class TiebaPostScraper:
                     self.result['content_images'] = images
                     self.result['create_time'] = comment['post_time']
                     self.result['author'] = comment['user']
-                    continue  # 【修复 #1】主楼不重复加入评论列表
+                    continue
 
                 self.result['comments'].append(comment)
 
-            # 检查分页
             pager = data.get('data', {}).get('page', {})
             total_page = safe_int(pager.get('total_page', 1))
             self.result['total_pages'] = total_page
@@ -797,15 +967,12 @@ class TiebaPostScraper:
     # 主入口
     # ----------------------------------------------------------
     def scrape(self) -> dict:
-        """执行爬取，返回结构化数据"""
         logger.info("=" * 60)
         logger.info(f"开始爬取帖子: {self.tid}")
         logger.info("=" * 60)
 
-        # 方案一：客户端 API
         success = self._scrape_via_client_api()
 
-        # 方案二：如果客户端 API 失败，尝试移动端 Web API
         if not success:
             logger.info("客户端 API 方式失败，切换到移动端 Web API...")
             success = self._scrape_via_mobile_api()
@@ -814,11 +981,9 @@ class TiebaPostScraper:
             logger.error("所有方式均失败，请检查帖子ID是否正确或网络状况")
             return self.result
 
-        # 爬取缺失的楼中楼子评论
         if self.fetch_sub_comments:
             self._scrape_all_sub_comments()
 
-        # 统计汇总
         total_comments = len(self.result['comments'])
         total_sub = sum(len(c.get('sub_comments', [])) for c in self.result['comments'])
 
@@ -834,8 +999,6 @@ class TiebaPostScraper:
         return self.result
 
     def _scrape_all_sub_comments(self):
-        """遍历所有楼层，补充爬取楼中楼子评论"""
-        # 找出有子评论但尚未爬取到的楼层
         floors_needing_sub = [
             c for c in self.result['comments']
             if c.get('sub_comment_count', 0) > 0
@@ -848,7 +1011,6 @@ class TiebaPostScraper:
 
         logger.info(f"正在补充爬取 {len(floors_needing_sub)} 个楼层的楼中楼评论...")
 
-        # 通过客户端 API 逐楼获取子评论
         for i, comment in enumerate(floors_needing_sub):
             pid = comment.get('post_id', '')
             count = comment.get('sub_comment_count', 0)
@@ -861,7 +1023,6 @@ class TiebaPostScraper:
                 time.sleep(REQUEST_DELAY * 0.5)
 
     def save_json(self, filepath: str):
-        """将结果保存为 JSON 文件"""
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(self.result, f, ensure_ascii=False, indent=2)
         logger.info(f"数据已保存至: {filepath}")
@@ -896,7 +1057,6 @@ def main():
     output_file = f"tieba_post_{tid}.json"
     scraper.save_json(output_file)
 
-    # 打印结果摘要
     print("\n" + "=" * 60)
     print("【结果预览】")
     print(f"  帖子ID:   {result['post_id']}")

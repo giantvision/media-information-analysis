@@ -162,6 +162,171 @@ def calc_sign(params: dict) -> str:
     return hashlib.md5(sign_str.encode('utf-8')).hexdigest()
 
 
+def _extract_user_from_author_dict(author_dict: dict) -> dict:
+    """
+    从子评论/帖子自身的 author 字典中提取用户信息。
+    用于 user_list 不包含该用户时的兜底提取。
+    """
+    if not isinstance(author_dict, dict):
+        return {}
+    uid = str(author_dict.get('id', ''))
+    if not uid:
+        return {}
+    return {
+        "user_id": uid,
+        "user_name": author_dict.get('name', ''),
+        "nick_name": author_dict.get('name_show', '') or author_dict.get('name', '') or author_dict.get('nick_name', ''),
+        "level_id": safe_int(author_dict.get('level_id', 0)),
+        "portrait": author_dict.get('portrait', ''),
+        "ip_address": author_dict.get('ip_address', ''),
+    }
+
+
+def _resolve_sub_comment_user(sp: dict, user_map: dict) -> tuple:
+    """
+    解析子评论的用户信息，返回 (uid, user_name)。
+    优先从 user_map 查找，其次从子评论自身的 author 字典提取，
+    并将新发现的用户写回 user_map。
+
+    Args:
+        sp: 子评论原始数据字典
+        user_map: 全局用户映射（会被就地更新）
+
+    Returns:
+        (uid_str, display_name)
+    """
+    # 1. 获取 uid：优先 author_id 字段，其次 author.id
+    sp_uid = str(sp.get('author_id', ''))
+    sp_author = sp.get('author', {})
+    if not sp_uid and isinstance(sp_author, dict):
+        sp_uid = str(sp_author.get('id', ''))
+
+    # 2. 从 user_map 查找
+    if sp_uid and sp_uid in user_map:
+        sp_name = (user_map[sp_uid].get('nick_name', '')
+                   or user_map[sp_uid].get('name_show', '')
+                   or user_map[sp_uid].get('user_name', ''))
+        if sp_name:
+            return sp_uid, sp_name
+
+    # 3. user_map 中没有或 nick_name 为空 → 从 author 字典兜底提取
+    if isinstance(sp_author, dict) and sp_author:
+        extracted = _extract_user_from_author_dict(sp_author)
+        if extracted:
+            # 回写到 user_map，供后续查找（包括 parse_content_blocks 的 @用户 解析）
+            if extracted['user_id'] not in user_map:
+                user_map[extracted['user_id']] = extracted
+            elif not user_map[extracted['user_id']].get('nick_name'):
+                # 已存在但 nick_name 为空，更新之
+                user_map[extracted['user_id']].update(
+                    {k: v for k, v in extracted.items() if v}
+                )
+            sp_name = extracted.get('nick_name', '') or extracted.get('user_name', '')
+            if sp_name:
+                return sp_uid or extracted['user_id'], sp_name
+
+    return sp_uid, ''
+
+
+def _resolve_reply_to(sp: dict, user_map: dict) -> dict:
+    """
+    从子评论元数据中解析「被回复者」信息。
+
+    根据实际抓包确认，楼中楼 API (c/f/pb/floor) 返回的子评论字段为：
+      time, is_giftpost, agree, is_author_view, log_param, id,
+      title, floor, author, location, content(列表)
+
+    其中 **title 字段就是被回复者的昵称**（非空时表示这是一条"回复某人"的评论）。
+    没有 reply_to_id / reply_to_user 等字段。
+
+    Returns:
+        {"uid": str, "name": str} 或空字典
+    """
+    if not isinstance(sp, dict):
+        return {}
+
+    reply_uid = ''
+    reply_name = ''
+
+    # === 策略1（核心）：title 字段即为被回复者昵称 ===
+    title = sp.get('title', '')
+    if isinstance(title, str) and title.strip():
+        reply_name = title.strip()
+
+    # === 策略2：从 content 块中的 type=11 提取被回复者 uid ===
+    content_blocks = sp.get('content', [])
+    if isinstance(content_blocks, list):
+        for block in content_blocks:
+            if isinstance(block, dict) and str(block.get('type', '')) == '11':
+                block_uid = str(block.get('uid', ''))
+                if block_uid and block_uid != '0':
+                    reply_uid = block_uid
+                # 如果 title 为空，也从 block 提取名字作为兜底
+                if not reply_name:
+                    reply_name = (block.get('name_show', '')
+                                  or block.get('name', '')
+                                  or block.get('text', ''))
+                break  # 只取第一个 type=11
+
+    # === 策略3：兼容其他 API 版本的专用字段 ===
+    if not reply_uid and not reply_name:
+        for key in ('reply_to_id', 'reply_uid', 'reply_to_user_id'):
+            val = sp.get(key)
+            if val and str(val) != '0':
+                reply_uid = str(val)
+                break
+        for key in ('reply_to_user', 'replyUser', 'reply_user'):
+            obj = sp.get(key, {})
+            if isinstance(obj, dict) and obj:
+                if not reply_uid:
+                    reply_uid = str(obj.get('id', ''))
+                if not reply_name:
+                    reply_name = (obj.get('name_show', '')
+                                  or obj.get('name', ''))
+                break
+
+    # === 用 reply_name 反查 user_map 获取 uid（如果 uid 仍为空） ===
+    if reply_name and not reply_uid:
+        for uid, u in user_map.items():
+            if (u.get('nick_name') == reply_name
+                    or u.get('name_show') == reply_name
+                    or u.get('user_name') == reply_name):
+                reply_uid = uid
+                break
+
+    # === 用 reply_uid 查 user_map 获取 name（如果 name 仍为空） ===
+    if reply_uid and not reply_name and reply_uid in user_map:
+        u = user_map[reply_uid]
+        reply_name = (u.get('nick_name', '')
+                      or u.get('name_show', '')
+                      or u.get('user_name', ''))
+
+    if reply_uid or reply_name:
+        return {"uid": reply_uid, "name": reply_name}
+    return {}
+
+
+def _fix_content_reply_to(content: str, reply_to: dict) -> str:
+    """
+    修复子评论正文中缺失的被回复者名字。
+
+    将 "回复 \\n :" 或 "回复 \\n:" 或 "回复 @用户{uid} :"
+    替换为 "回复 @{reply_name} :"
+    """
+    if not reply_to or not reply_to.get('name'):
+        return content
+
+    name = reply_to['name']
+
+    # 匹配多种残缺模式：
+    #   "回复 \n :"   "回复 \n:"   "回复  :"
+    #   "回复 @用户12345 :"   "回复 @用户12345:"
+    pattern = r'回复\s*(?:@用户\d+)?\s*\n?\s*:'
+    replacement = f'回复 @{name} :'
+    fixed = re.sub(pattern, replacement, content, count=1)
+    return fixed
+
+
 def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
     """
     解析客户端 API 返回的 content 结构化内容块
@@ -235,20 +400,40 @@ def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
             # 语音
             text_parts.append('[语音]')
         elif block_type == '11':
-            # @用户 —— 关键修复：text 可能为空，需要从 uid 反查用户名
+            # @用户 / 回复用户 —— text 可能为空，需多级兜底
             text = block.get('text', '')
             if text:
                 text_parts.append(text)
             else:
-                # text 为空时，尝试通过 uid 从 user_map 查找昵称
                 uid = str(block.get('uid', ''))
+                resolved_name = ''
+
+                # 兜底1：从 user_map 查找
                 if uid and uid in user_map:
                     u = user_map[uid]
-                    name = u.get('name_show', '') or u.get('name', '') or u.get('nick_name', '')
-                    if name:
-                        text_parts.append(f'@{name}')
+                    resolved_name = (u.get('name_show', '')
+                                     or u.get('nick_name', '')
+                                     or u.get('name', '')
+                                     or u.get('user_name', ''))
+
+                # 兜底2：从 block 自身的 name / name_show 字段提取
+                if not resolved_name:
+                    resolved_name = (block.get('name_show', '')
+                                     or block.get('name', '')
+                                     or block.get('nick_name', ''))
+                    # 如果从 block 中发现了名字，回写到 user_map
+                    if resolved_name and uid and uid not in user_map:
+                        user_map[uid] = {
+                            "user_id": uid,
+                            "user_name": resolved_name,
+                            "nick_name": resolved_name,
+                            "name_show": resolved_name,
+                        }
+
+                if resolved_name:
+                    text_parts.append(f'@{resolved_name}')
                 elif uid:
-                    # user_map 中也没有，保留 uid 作为标识
+                    # 所有兜底均失败，保留 uid 作为标识
                     text_parts.append(f'@用户{uid}')
         elif block_type == '18':
             # 话题标签
@@ -503,9 +688,25 @@ class TiebaPostScraper:
                 nick_name = u_info.get('nick_name', '') or user_name
                 level_id = u_info.get('level_id', 0)
             else:
-                user_name = ''
-                nick_name = ''
-                level_id = 0
+                # ★ 兜底：尝试从 post 自身的 author 字典提取
+                post_author = post.get('author', {})
+                if isinstance(post_author, dict) and post_author:
+                    extracted = _extract_user_from_author_dict(post_author)
+                    if extracted and extracted.get('user_id'):
+                        uid = uid or extracted['user_id']
+                        user_name = extracted.get('user_name', '')
+                        nick_name = extracted.get('nick_name', '') or user_name
+                        level_id = extracted.get('level_id', 0)
+                        # 回写到 user_map
+                        user_map[uid] = extracted
+                    else:
+                        user_name = ''
+                        nick_name = ''
+                        level_id = 0
+                else:
+                    user_name = ''
+                    nick_name = ''
+                    level_id = 0
 
             user = {
                 "user_id": uid,
@@ -561,24 +762,37 @@ class TiebaPostScraper:
             if isinstance(sub_post_list, dict):
                 sub_posts = sub_post_list.get('sub_post_list', [])
                 if sub_posts:
+                    # ★ 第一遍：预扫描所有子评论的作者信息写入 user_map，
+                    #   同时收集 reply_to 信息
                     for sp in sub_posts:
-                        # 子评论也可能只有 author_id
-                        sp_uid = str(sp.get('author_id', ''))
-                        if not sp_uid:
-                            sp_author = sp.get('author', {})
-                            sp_uid = str(sp_author.get('id', '')) if isinstance(sp_author, dict) else ''
-                        sp_name = ''
-                        if sp_uid and sp_uid in user_map:
-                            sp_name = user_map[sp_uid].get('nick_name', '')
+                        _resolve_sub_comment_user(sp, user_map)
+                        _resolve_reply_to(sp, user_map)  # 也把被回复者写入 user_map
+                    # ★ 第二遍：解析内容（此时 user_map 已包含本批所有用户）
+                    for sp in sub_posts:
+                        sp_uid, sp_name = _resolve_sub_comment_user(sp, user_map)
+                        reply_to = _resolve_reply_to(sp, user_map)
 
                         sp_content_blocks = sp.get('content', [])
                         sp_text, sp_images = parse_content_blocks(sp_content_blocks, user_map)
+
+                        # ★ 修复：用元数据中的被回复者名字修补 content
+                        if reply_to:
+                            sp_text = _fix_content_reply_to(sp_text, reply_to)
+                        elif '回复' in sp_text and re.search(r'回复\s*\n?\s*:', sp_text):
+                            logger.warning(
+                                f"无法解析内联子评论的被回复者: "
+                                f"title='{sp.get('title', '')}', "
+                                f"author={sp.get('author', {}).get('name_show', '?')}"
+                            )
+
                         sub_comment = {
                             "user_name": sp_name,
                             "user_id": sp_uid,
                             "content": sp_text,
                             "time": format_timestamp(sp.get('time', 0)),
                         }
+                        if reply_to and reply_to.get('name'):
+                            sub_comment['reply_to'] = reply_to
                         if sp_images:
                             sub_comment['images'] = sp_images
                         comment['sub_comments'].append(sub_comment)
@@ -596,7 +810,7 @@ class TiebaPostScraper:
         page = 1
         max_sub_pages = (total // 10) + 2
         # 使用已有的 user_map，并在过程中扩展
-        user_map = getattr(self, '_user_map', {})
+        user_map = self._user_map
 
         while page <= max_sub_pages:
             params = self._build_client_params({
@@ -624,14 +838,26 @@ class TiebaPostScraper:
             for u in floor_user_list:
                 if isinstance(u, dict):
                     uid = str(u.get('id', ''))
-                    if uid and uid not in user_map:
-                        user_map[uid] = {
-                            "user_id": uid,
-                            "user_name": u.get('name', ''),
-                            "name_show": u.get('name_show', '') or u.get('name', ''),
-                            "nick_name": u.get('name_show', '') or u.get('name', ''),
-                            "level_id": safe_int(u.get('level_id', 0)),
-                        }
+                    if uid:
+                        # ★ 修复：不再跳过已存在的 uid，而是补充缺失字段
+                        if uid not in user_map:
+                            user_map[uid] = {
+                                "user_id": uid,
+                                "user_name": u.get('name', ''),
+                                "name_show": u.get('name_show', '') or u.get('name', ''),
+                                "nick_name": u.get('name_show', '') or u.get('name', ''),
+                                "level_id": safe_int(u.get('level_id', 0)),
+                            }
+                        else:
+                            # 已存在但可能 nick_name 为空，补充
+                            existing = user_map[uid]
+                            if not existing.get('nick_name') and not existing.get('name_show'):
+                                new_name = u.get('name_show', '') or u.get('name', '')
+                                if new_name:
+                                    existing['nick_name'] = new_name
+                                    existing['name_show'] = new_name
+                                    if not existing.get('user_name'):
+                                        existing['user_name'] = u.get('name', '')
 
             # 提取子评论列表
             subpost_list = data.get('subpost_list', [])
@@ -641,20 +867,46 @@ class TiebaPostScraper:
             if not subpost_list:
                 break
 
-            for sp in subpost_list:
-                # 子评论同样可能只有 author_id 而没有 author 字典
-                sp_uid = str(sp.get('author_id', ''))
-                if not sp_uid:
-                    sp_author = sp.get('author', {})
-                    if isinstance(sp_author, dict):
-                        sp_uid = str(sp_author.get('id', ''))
+            # ★ DEBUG: 记录第一条有"回复"的子评论的关键字段
+            if subpost_list and page == 1:
+                for dbg_sp in subpost_list[:3]:
+                    if isinstance(dbg_sp, dict):
+                        dbg_title = dbg_sp.get('title', '')
+                        dbg_author = dbg_sp.get('author', {})
+                        dbg_author_name = dbg_author.get('name_show', '') if isinstance(dbg_author, dict) else ''
+                        # 检查 content 中有无 type=11 块
+                        dbg_content = dbg_sp.get('content', [])
+                        dbg_type11 = [b for b in dbg_content if isinstance(b, dict) and str(b.get('type', '')) == '11'] if isinstance(dbg_content, list) else []
+                        logger.debug(
+                            f"子评论 id={dbg_sp.get('id','')} "
+                            f"author={dbg_author_name} "
+                            f"title='{dbg_title}' "
+                            f"type11_blocks={dbg_type11}"
+                        )
 
-                sp_name = ''
-                if sp_uid and sp_uid in user_map:
-                    sp_name = user_map[sp_uid].get('nick_name', '')
+            for sp in subpost_list:
+                # ★ 第一遍：预扫描所有子评论作者 + 被回复者写入 user_map
+                _resolve_sub_comment_user(sp, user_map)
+                _resolve_reply_to(sp, user_map)
+
+            for sp in subpost_list:
+                # ★ 第二遍：解析内容（此时 user_map 已包含本批所有用户）
+                sp_uid, sp_name = _resolve_sub_comment_user(sp, user_map)
+                reply_to = _resolve_reply_to(sp, user_map)
 
                 sp_content_blocks = sp.get('content', [])
                 sp_text, sp_images = parse_content_blocks(sp_content_blocks, user_map)
+
+                # ★ 修复：用元数据中的被回复者名字修补 content
+                if reply_to:
+                    sp_text = _fix_content_reply_to(sp_text, reply_to)
+                elif '回复' in sp_text and re.search(r'回复\s*\n?\s*:', sp_text):
+                    # 仍然无法解析 → 输出 title 值帮助进一步调试
+                    logger.warning(
+                        f"无法解析子评论的被回复者: "
+                        f"title='{sp.get('title', '')}', "
+                        f"author={sp.get('author', {}).get('name_show', '?')}"
+                    )
 
                 sub_comment = {
                     "user_name": sp_name,
@@ -662,6 +914,8 @@ class TiebaPostScraper:
                     "content": sp_text,
                     "time": format_timestamp(sp.get('time', 0)),
                 }
+                if reply_to and reply_to.get('name'):
+                    sub_comment['reply_to'] = reply_to
                 if sp_images:
                     sub_comment['images'] = sp_images
                 sub_comments.append(sub_comment)

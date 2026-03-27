@@ -162,6 +162,72 @@ def calc_sign(params: dict) -> str:
     return hashlib.md5(sign_str.encode('utf-8')).hexdigest()
 
 
+def _extract_user_from_author_dict(author_dict: dict) -> dict:
+    """
+    从子评论/帖子自身的 author 字典中提取用户信息。
+    用于 user_list 不包含该用户时的兜底提取。
+    """
+    if not isinstance(author_dict, dict):
+        return {}
+    uid = str(author_dict.get('id', ''))
+    if not uid:
+        return {}
+    return {
+        "user_id": uid,
+        "user_name": author_dict.get('name', ''),
+        "nick_name": author_dict.get('name_show', '') or author_dict.get('name', '') or author_dict.get('nick_name', ''),
+        "level_id": safe_int(author_dict.get('level_id', 0)),
+        "portrait": author_dict.get('portrait', ''),
+        "ip_address": author_dict.get('ip_address', ''),
+    }
+
+
+def _resolve_sub_comment_user(sp: dict, user_map: dict) -> tuple:
+    """
+    解析子评论的用户信息，返回 (uid, user_name)。
+    优先从 user_map 查找，其次从子评论自身的 author 字典提取，
+    并将新发现的用户写回 user_map。
+
+    Args:
+        sp: 子评论原始数据字典
+        user_map: 全局用户映射（会被就地更新）
+
+    Returns:
+        (uid_str, display_name)
+    """
+    # 1. 获取 uid：优先 author_id 字段，其次 author.id
+    sp_uid = str(sp.get('author_id', ''))
+    sp_author = sp.get('author', {})
+    if not sp_uid and isinstance(sp_author, dict):
+        sp_uid = str(sp_author.get('id', ''))
+
+    # 2. 从 user_map 查找
+    if sp_uid and sp_uid in user_map:
+        sp_name = (user_map[sp_uid].get('nick_name', '')
+                   or user_map[sp_uid].get('name_show', '')
+                   or user_map[sp_uid].get('user_name', ''))
+        if sp_name:
+            return sp_uid, sp_name
+
+    # 3. user_map 中没有或 nick_name 为空 → 从 author 字典兜底提取
+    if isinstance(sp_author, dict) and sp_author:
+        extracted = _extract_user_from_author_dict(sp_author)
+        if extracted:
+            # 回写到 user_map，供后续查找（包括 parse_content_blocks 的 @用户 解析）
+            if extracted['user_id'] not in user_map:
+                user_map[extracted['user_id']] = extracted
+            elif not user_map[extracted['user_id']].get('nick_name'):
+                # 已存在但 nick_name 为空，更新之
+                user_map[extracted['user_id']].update(
+                    {k: v for k, v in extracted.items() if v}
+                )
+            sp_name = extracted.get('nick_name', '') or extracted.get('user_name', '')
+            if sp_name:
+                return sp_uid or extracted['user_id'], sp_name
+
+    return sp_uid, ''
+
+
 def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
     """
     解析客户端 API 返回的 content 结构化内容块
@@ -244,7 +310,7 @@ def parse_content_blocks(content_blocks, user_map: dict = None) -> tuple:
                 uid = str(block.get('uid', ''))
                 if uid and uid in user_map:
                     u = user_map[uid]
-                    name = u.get('name_show', '') or u.get('name', '') or u.get('nick_name', '')
+                    name = u.get('name_show', '') or u.get('nick_name', '') or u.get('name', '')
                     if name:
                         text_parts.append(f'@{name}')
                 elif uid:
@@ -503,9 +569,25 @@ class TiebaPostScraper:
                 nick_name = u_info.get('nick_name', '') or user_name
                 level_id = u_info.get('level_id', 0)
             else:
-                user_name = ''
-                nick_name = ''
-                level_id = 0
+                # ★ 兜底：尝试从 post 自身的 author 字典提取
+                post_author = post.get('author', {})
+                if isinstance(post_author, dict) and post_author:
+                    extracted = _extract_user_from_author_dict(post_author)
+                    if extracted and extracted.get('user_id'):
+                        uid = uid or extracted['user_id']
+                        user_name = extracted.get('user_name', '')
+                        nick_name = extracted.get('nick_name', '') or user_name
+                        level_id = extracted.get('level_id', 0)
+                        # 回写到 user_map
+                        user_map[uid] = extracted
+                    else:
+                        user_name = ''
+                        nick_name = ''
+                        level_id = 0
+                else:
+                    user_name = ''
+                    nick_name = ''
+                    level_id = 0
 
             user = {
                 "user_id": uid,
@@ -562,14 +644,8 @@ class TiebaPostScraper:
                 sub_posts = sub_post_list.get('sub_post_list', [])
                 if sub_posts:
                     for sp in sub_posts:
-                        # 子评论也可能只有 author_id
-                        sp_uid = str(sp.get('author_id', ''))
-                        if not sp_uid:
-                            sp_author = sp.get('author', {})
-                            sp_uid = str(sp_author.get('id', '')) if isinstance(sp_author, dict) else ''
-                        sp_name = ''
-                        if sp_uid and sp_uid in user_map:
-                            sp_name = user_map[sp_uid].get('nick_name', '')
+                        # ★ 修复：使用统一的用户解析函数
+                        sp_uid, sp_name = _resolve_sub_comment_user(sp, user_map)
 
                         sp_content_blocks = sp.get('content', [])
                         sp_text, sp_images = parse_content_blocks(sp_content_blocks, user_map)
@@ -596,7 +672,7 @@ class TiebaPostScraper:
         page = 1
         max_sub_pages = (total // 10) + 2
         # 使用已有的 user_map，并在过程中扩展
-        user_map = getattr(self, '_user_map', {})
+        user_map = self._user_map
 
         while page <= max_sub_pages:
             params = self._build_client_params({
@@ -624,14 +700,26 @@ class TiebaPostScraper:
             for u in floor_user_list:
                 if isinstance(u, dict):
                     uid = str(u.get('id', ''))
-                    if uid and uid not in user_map:
-                        user_map[uid] = {
-                            "user_id": uid,
-                            "user_name": u.get('name', ''),
-                            "name_show": u.get('name_show', '') or u.get('name', ''),
-                            "nick_name": u.get('name_show', '') or u.get('name', ''),
-                            "level_id": safe_int(u.get('level_id', 0)),
-                        }
+                    if uid:
+                        # ★ 修复：不再跳过已存在的 uid，而是补充缺失字段
+                        if uid not in user_map:
+                            user_map[uid] = {
+                                "user_id": uid,
+                                "user_name": u.get('name', ''),
+                                "name_show": u.get('name_show', '') or u.get('name', ''),
+                                "nick_name": u.get('name_show', '') or u.get('name', ''),
+                                "level_id": safe_int(u.get('level_id', 0)),
+                            }
+                        else:
+                            # 已存在但可能 nick_name 为空，补充
+                            existing = user_map[uid]
+                            if not existing.get('nick_name') and not existing.get('name_show'):
+                                new_name = u.get('name_show', '') or u.get('name', '')
+                                if new_name:
+                                    existing['nick_name'] = new_name
+                                    existing['name_show'] = new_name
+                                    if not existing.get('user_name'):
+                                        existing['user_name'] = u.get('name', '')
 
             # 提取子评论列表
             subpost_list = data.get('subpost_list', [])
@@ -642,16 +730,8 @@ class TiebaPostScraper:
                 break
 
             for sp in subpost_list:
-                # 子评论同样可能只有 author_id 而没有 author 字典
-                sp_uid = str(sp.get('author_id', ''))
-                if not sp_uid:
-                    sp_author = sp.get('author', {})
-                    if isinstance(sp_author, dict):
-                        sp_uid = str(sp_author.get('id', ''))
-
-                sp_name = ''
-                if sp_uid and sp_uid in user_map:
-                    sp_name = user_map[sp_uid].get('nick_name', '')
+                # ★ 修复：使用统一的用户解析函数
+                sp_uid, sp_name = _resolve_sub_comment_user(sp, user_map)
 
                 sp_content_blocks = sp.get('content', [])
                 sp_text, sp_images = parse_content_blocks(sp_content_blocks, user_map)
