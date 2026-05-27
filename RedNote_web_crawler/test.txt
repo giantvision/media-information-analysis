@@ -1,0 +1,13 @@
+python -c "
+import json
+from xhs import XhsClient
+from xhs.help import sign
+
+state = json.load(open('./xhs_run/.profiles/walkingsilent.json'))
+cookies = {c['name']: c['value'] for c in state['cookies']}
+cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
+
+c = XhsClient(cookie=cookie_str, sign=lambda uri, data=None, a1='', web_session='': sign(uri, data, a1=a1))
+res = c.get_note_by_keyword('三国志战略版', page=1, page_size=5)
+print('items:', len(res.get('items', [])))
+"
