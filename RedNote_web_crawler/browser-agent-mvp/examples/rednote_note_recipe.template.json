@@ -1,0 +1,82 @@
+{
+  "site": "rednote",
+  "version": "2026-06-04.1",
+  "status": "template",
+  "description": "Template for authorized RedNote/Xiaohongshu note detail capture. Adjust url_pattern and JSON paths after recording a real page.",
+  "actions": [
+    {"type": "wait", "until": "network_idle"},
+    {"type": "scroll_until_stable", "distance": 900, "max_rounds": 80, "pause_ms": 1200, "stable_rounds": 4},
+    {"type": "wait", "duration_ms": 3000}
+  ],
+  "datasets": [
+    {
+      "name": "post",
+      "network_sources": [
+        {
+          "name": "note_detail",
+          "url_pattern": "/api/sns/web/v1/feed",
+          "method": "POST",
+          "content_type": "json",
+          "item_path": "$.data.items[*]"
+        }
+      ],
+      "fields": {
+        "note_id": {"source": "network", "path": "$.id", "required": true},
+        "title": {"source": "network", "path": "$.note_card.title"},
+        "desc": {"source": "network", "path": "$.note_card.desc"},
+        "author_id": {"source": "network", "path": "$.note_card.user.user_id"},
+        "author_name": {"source": "network", "path": "$.note_card.user.nickname"},
+        "liked_count": {"source": "network", "path": "$.note_card.interact_info.liked_count", "transform": "parse_count"},
+        "collected_count": {"source": "network", "path": "$.note_card.interact_info.collected_count", "transform": "parse_count"},
+        "comment_count": {"source": "network", "path": "$.note_card.interact_info.comment_count", "transform": "parse_count"}
+      },
+      "dedupe": {
+        "primary_key": "note_id",
+        "hash_fields": ["title", "desc", "author_id"]
+      },
+      "health_check": {
+        "required_fields": ["note_id"],
+        "min_items_per_page": 1,
+        "max_missing_rate": 0.1
+      }
+    },
+    {
+      "name": "comments",
+      "network_sources": [
+        {
+          "name": "comment_page",
+          "url_pattern": "/api/sns/web/v2/comment/page",
+          "method": "GET",
+          "content_type": "json",
+          "item_path": "$.data.comments[*]"
+        },
+        {
+          "name": "comment_sub_page",
+          "url_pattern": "/api/sns/web/v2/comment/sub/page",
+          "method": "GET",
+          "content_type": "json",
+          "item_path": "$.data.comments[*]"
+        }
+      ],
+      "fields": {
+        "comment_id": {"source": "network", "path": "$.id", "required": true},
+        "note_id": {"source": "network", "path": "$.note_id"},
+        "parent_id": {"source": "network", "path": "$.target_comment.id"},
+        "content": {"source": "network", "path": "$.content"},
+        "user_id": {"source": "network", "path": "$.user_info.user_id"},
+        "user_name": {"source": "network", "path": "$.user_info.nickname"},
+        "liked_count": {"source": "network", "path": "$.like_count", "transform": "parse_count"},
+        "created_time": {"source": "network", "path": "$.create_time"}
+      },
+      "dedupe": {
+        "primary_key": "comment_id",
+        "hash_fields": ["content", "user_id", "created_time"]
+      },
+      "health_check": {
+        "required_fields": ["comment_id", "content"],
+        "min_items_per_page": 0,
+        "max_missing_rate": 0.2
+      }
+    }
+  ]
+}

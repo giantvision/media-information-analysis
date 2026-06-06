@@ -1,0 +1,12 @@
+[project]
+name = "browser-agent-mvp"
+version = "0.1.0"
+description = "MVP implementation for Recipe + Network Extractor + Feedback Memory."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+browser-agent = "browser_agent.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -1,0 +1,37 @@
+[
+  {
+    "response_id": "resp_001",
+    "url": "https://example.com/api/search?q=agent",
+    "method": "GET",
+    "status": 200,
+    "content_type": "application/json",
+    "body": {
+      "data": {
+        "cursor": "cursor_2",
+        "has_more": true,
+        "items": [
+          {
+            "id": "note_001",
+            "title": "Browser Agent 技术方案",
+            "user": {"nickname": "研究员A"},
+            "stats": {"likes": "1.2万"}
+          },
+          {
+            "id": "note_002",
+            "title": "CDP Network Extractor 实战",
+            "user": {"nickname": "工程师B"},
+            "stats": {"likes": "890"}
+          }
+        ]
+      }
+    }
+  },
+  {
+    "response_id": "resp_002",
+    "url": "https://example.com/assets/app.js",
+    "method": "GET",
+    "status": 200,
+    "content_type": "application/javascript",
+    "body": "console.log('ignored')"
+  }
+]

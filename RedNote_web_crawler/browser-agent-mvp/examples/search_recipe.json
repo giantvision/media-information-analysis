@@ -1,0 +1,62 @@
+{
+  "site": "demo_media",
+  "version": "2026-06-04.1",
+  "status": "active",
+  "entry": {
+    "type": "url_template",
+    "url": "https://example.com/search?q={{keyword}}"
+  },
+  "actions": [
+    {"type": "wait", "until": "network_idle"},
+    {"type": "scroll", "direction": "down", "distance": 1200},
+    {"type": "wait", "duration_ms": 800}
+  ],
+  "network_sources": [
+    {
+      "name": "search_feed",
+      "url_pattern": "/api/search",
+      "method": "GET",
+      "content_type": "json",
+      "item_path": "$.data.items[*]"
+    }
+  ],
+  "fields": {
+    "item_id": {
+      "source": "network",
+      "path": "$.id",
+      "required": true
+    },
+    "title": {
+      "source": "network",
+      "path": "$.title",
+      "required": true,
+      "fallback": [
+        {"source": "dom", "selector": ".title"}
+      ]
+    },
+    "author": {
+      "source": "network",
+      "path": "$.user.nickname"
+    },
+    "like_count": {
+      "source": "network",
+      "path": "$.stats.likes",
+      "transform": "parse_count"
+    }
+  },
+  "pagination": {
+    "type": "cursor",
+    "cursor_path": "$.data.cursor",
+    "has_more_path": "$.data.has_more",
+    "max_pages": 20
+  },
+  "dedupe": {
+    "primary_key": "item_id",
+    "hash_fields": ["title", "author"]
+  },
+  "health_check": {
+    "required_fields": ["item_id", "title"],
+    "min_items_per_page": 2,
+    "max_missing_rate": 0.2
+  }
+}
